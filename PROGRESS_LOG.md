@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Lessons learned (don't repeat these)
+- 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
+
 ## 2026-11-20 — v0.1.0 RELEASED; source public (main)
 - User: "make it a proper release + proper readme + public repo"; picked stable v0.1.0 and a fresh public repo.
 - Work log cleaned of download names/device details; dev repo main merged (backup refs/backup/20261120/main-before-browser-core
@@ -13,9 +16,6 @@ Newest first.
   public download re-verified; unauthenticated releases API returns v0.1.0 with APK + SHA256SUMS.
 - Phone runs e9173900 (same code, versionName 0.1.0) -> updater shows up to date.
 - Next: device tests of untested features; future work on feat/* branches in this public repo.
-
-## Lessons learned (don't repeat these)
-- 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
 ## 2026-11-20 — Detailed speed test results; temp-file fix e9173900 installed (feat/browser-core)
 - Detailed test (03abd479, 05:38-05:41 EST, screen off, background FGS via deviceidle temp allowlist, no freeze):
