@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CleanBrowser" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/splash_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <!-- Context themes for WebViews: decide prefers-color-scheme and algorithmic darkening. -->
+    <style name="WebLight" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:isLightTheme">true</item>
+    </style>
+    <style name="WebDark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:isLightTheme">false</item>
+    </style>
+    <color name="splash_bg">#FF121316</color>
+    <color name="ic_bg">#FF051316</color>
+</resources>

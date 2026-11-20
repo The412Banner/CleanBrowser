@@ -1,0 +1,95 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  # workflow_dispatch only works once this file is on main; until then feature branches build on push.
+  push:
+    branches: [ 'feat/**', 'fix/**' ]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Fetch native libraries (checksum-pinned)
+        run: bash tools/fetch-libs.sh
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon --stacktrace testReleaseUnitTest
+
+      - name: Build release APK
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: No tracking libraries
+        run: |
+          set -e
+          ./gradlew --no-daemon -q :app:dependencies --configuration releaseRuntimeClasspath > deps.txt
+          if grep -iE 'firebase|play-services|gms|crashlytics|analytics|appcenter|sentry|bugsnag' deps.txt; then
+            echo "tracking dependency found"; exit 1
+          fi
+          echo "no tracking dependencies"
+
+      - name: Check signature (testkey, v1 + v2 + v3)
+        run: |
+          set -e
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          # AGP leaves out v1 (JAR) signing for minSdk >= 24; re-sign with all three.
+          "$BT/apksigner" sign --ks keystore/testkey.p12 --ks-type PKCS12 --ks-pass pass:android \
+            --ks-key-alias testkey --key-pass pass:android --min-sdk-version 21 \
+            --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
+            --out "$APK.signed" "$APK"
+          mv "$APK.signed" "$APK"
+          # --min-sdk-version 21 makes apksigner check v1 too.
+          "$BT/apksigner" verify -v --print-certs --min-sdk-version 21 "$APK" | tee verify.txt
+          grep -q 'Verified using v1 scheme (JAR signing): true' verify.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' verify.txt
+          grep -q 'Verified using v3 scheme (APK Signature Scheme v3): true' verify.txt
+          grep -qi 'SHA-256 digest: a40da80a59d170caa950cf15c18c454d47a39b26989d8b640ecd745ba71bf5dc' verify.txt
+
+      - name: Name the APK
+        run: |
+          set -e
+          SHA=$(git rev-parse --short=8 HEAD)
+          VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          mkdir -p out
+          cp app/build/outputs/apk/release/*.apk "out/CleanBrowser-${VER}-${SHA}.apk"
+          cd out && sha256sum *.apk | tee SHA256SUMS
+          echo "APK size:"; ls -l *.apk | awk '{printf "%s bytes (%.2f MB)\n", $5, $5/1048576}'
+          unzip -l *.apk | sort -k1 -n -r | head -15
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: CleanBrowser-${{ github.sha }}
+          path: out/
+          retention-days: 14
+
+      # The account's Actions storage can be full; also keep the APK on a draft (unpublished) release.
+      - name: Upload to draft release "ci-builds"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if ! gh release view ci-builds >/dev/null 2>&1; then
+            gh release create ci-builds --draft --title "CI test builds" --notes "Unpublished test builds from Actions." --target "$GITHUB_SHA"
+          fi
+          for a in $(gh release view ci-builds --json assets -q '.assets[].name'); do gh release delete-asset ci-builds "$a" -y; done
+          gh release upload ci-builds out/*.apk out/SHA256SUMS --clobber
+          gh release view ci-builds --json assets -q '.assets[] | "\(.name) \(.size)"'
