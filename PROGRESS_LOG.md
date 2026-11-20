@@ -2,6 +2,18 @@
 
 Newest first.
 
+## 2026-11-20 — v0.1.0 RELEASED; source public (main)
+- User: "make it a proper release + proper readme + public repo"; picked stable v0.1.0 and a fresh public repo.
+- Work log cleaned of download names/device details; dev repo main merged (backup refs/backup/20261120/main-before-browser-core
+  = b09637bd), code on main identical to the device-tested build e9173900. Old private repo renamed CleanBrowser-dev
+  (private, full history). New public repo The412Banner/CleanBrowser = single commit 263738f9 (README rewritten).
+- Release build CI 44729907086 (workflow_dispatch, headSha 263738f9) GREEN: tests, no tracking libs, v1+v2+v3 testkey.
+- v0.1.0 published as Latest in CleanBrowser (tag -> 263738f9) and CleanBrowser-releases (tag -> 9aabbb3b, read by the
+  updater). Asset CleanBrowser-0.1.0.apk 14,688,225 bytes, sha256 651cbfeba4a2e68e765a48b5e365f9cdeccb5e5f46883204a1a66f1cad1b1e55;
+  public download re-verified; unauthenticated releases API returns v0.1.0 with APK + SHA256SUMS.
+- Phone runs e9173900 (same code, versionName 0.1.0) -> updater shows up to date.
+- Next: device tests of untested features; future work on feat/* branches in this public repo.
+
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
