@@ -5,6 +5,12 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
+## 2026-11-21 — fastlane store metadata (main bbe79855)
+- Why: Orion's submit form auto-fills icon/screenshots only from fastlane paths (or README images; its README icon fallback skips any URL containing "banner", i.e. every The412Banner link).
+- Built: fastlane/metadata/android/en-US/images/icon.png + phoneScreenshots/1-4.png (same files as docs/). Branch feat/fastlane-metadata fast-forwarded to main; backup ref refs/backup/20261121/main-before-fastlane-metadata = 6f682242 (created after the merge: first push failed on a zsh `$VAR:r` modifier; use `${VAR}:refs/...`).
+- Checked: raw icon 200 image/png; contents API lists 1-4.png; each raw shot 200 image/png.
+- Open/Next: user re-enters the repo URL in the Orion form to re-run detection.
+
 ## 2026-11-21 — Store listing images (main 6c145d1)
 - Why: Orion Store submission needs a PNG icon and at least 3 direct screenshot links; repo only had logo.webp.
 - Built: docs/images/icon.png (logo.webp padded to 384x384 PNG) + docs/screenshots/1-4.png (user's own device screenshots: start page, menu, download settings, torrent settings; town name on the weather card blanked). Branch feat/store-listing-images fast-forwarded to main; backup ref refs/backup/20261121/main-before-store-listing-images = f9794083. Raw links checked (200, image/png, same bytes).
