@@ -5,6 +5,11 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
+## 2026-11-21 — Store listing images (main 6c145d1)
+- Why: Orion Store submission needs a PNG icon and at least 3 direct screenshot links; repo only had logo.webp.
+- Built: docs/images/icon.png (logo.webp padded to 384x384 PNG) + docs/screenshots/1-4.png (user's own device screenshots: start page, menu, download settings, torrent settings; town name on the weather card blanked). Branch feat/store-listing-images fast-forwarded to main; backup ref refs/backup/20261121/main-before-store-listing-images = f9794083. Raw links checked (200, image/png, same bytes).
+- Open/Next: user finishes the Orion form in the app (Icon URL + 4 screenshot URLs); README still shows logo.webp, no screenshots section.
+
 ## 2026-11-20 — v0.1.0 RELEASED; source public (main)
 - User: "make it a proper release + proper readme + public repo"; picked stable v0.1.0 and a fresh public repo.
 - Work log cleaned of download names/device details; dev repo main merged (backup refs/backup/20261120/main-before-browser-core
