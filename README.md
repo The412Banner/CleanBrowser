@@ -113,9 +113,9 @@ Stack: Kotlin, Jetpack Compose (Material 3), Android System WebView, OkHttp, SQL
 
 0.2.0. Used on a Pocket FIT (Android 14): browsing, ad blocking, tabs, menus, start page, downloads
 (multi-connection speed test up to 26 MB/s), adding and downloading torrents, share links, torrents on the SD card
-(preparing, pause, close and reopen). Not yet tested on a device: the new tab button and the address bar copy/share
-buttons, multi-connection downloads to the SD card, password autofill, private-tab screenshot / keyboard protection,
-weather, site icons, Tor, WireGuard, proxy routing and the updater.
+(preparing, pause, close and reopen), the new tab button, address bar copy/share and the in-app updater. Not yet
+tested on a device: multi-connection downloads to the SD card, password autofill, private-tab screenshot / keyboard protection,
+weather, site icons, Tor, WireGuard, proxy routing.
 Please report problems in [Issues](https://github.com/The412Banner/CleanBrowser/issues).
 
 ## Credits

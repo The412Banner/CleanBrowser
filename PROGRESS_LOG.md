@@ -15,7 +15,8 @@ Newest first.
 - Published 14:4x EST: CleanBrowser v0.2.0 (tag -> 5570d9f2a0acc8e40b7bd3f50f06800a17563145) + CleanBrowser-releases v0.2.0 (tag -> cb77e4fc), both Latest, not draft/pre, assets APK + SHA256SUMS. Verified: unauthenticated releases API lists v0.2.0 first (what the updater reads); public downloads from both repos hash 3ee3a955….
 - Slip: pushed log commit b11877b to main while the release build ran (rule: never). No effect (build pinned to 5570d9f2, tag set by full SHA). Added to lessons.
 - 14:56:52 EST IN-APP UPDATER DEVICE-PROVEN (first time): user updated from the test build (0.1.0) via Settings -> About; Android installer InstallSuccess 14:56:54; installed versionCode 2 / 0.2.0, base.apk sha256 3ee3a955… = release asset; crash buffer 0.
-- Open: toolbar/copy-share + SD multi-connection HTTP not device-tested.
+- 15:1x EST user: toolbar +, menu +, address bar Copy/Share "they work" on 0.2.0 (user-proven). Release notes (both repos) + README untested lists updated.
+- Open: multi-connection HTTP download to the SD not device-tested.
 - 14:5x EST cleanup (user: "yes delete ... the branches"): feat/share-link-magnet, feat/toolbar-new-tab-copy-share, fix/sd-card-step-grow deleted (remote + local) after backup refs refs/backup/20261123/branch-<name> (8a1ccd18, 65f5d83c, ba1470a3; all contained in main). Left: feat/fastlane-metadata, feat/store-listing-images (11-21, in main).
 
 ## 2026-11-23 — SD-card step-grow fix (MERGED main for 0.2.0; code = tested b500a6c6)
