@@ -3,14 +3,18 @@
 Newest first.
 
 ## Lessons learned (don't repeat these)
+- 11-23: never install/kill the app while a torrent writes to the SD card (pre-0.2.0 builds zero-fill whole files in one call). Never push to main while a release build runs, not even log commits. zsh: write `${VAR}:refs/...`, never `$VAR:refs` (`:r` modifier). After rewriting a branch on the remote, update the local branch before merging it.
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
-## 2026-11-23 — Release 0.2.0 in progress (main 5570d9f2)
+## 2026-11-23 — v0.2.0 RELEASED (Latest; tag -> 5570d9f2)
 - User: "merge to main, release a new stable"; asked how, picked "Release everything now" (toolbar buttons + copy/share NOT device-tested; recorded in its entry).
 - Before merge: toolbar branch log had the SD card id + file names from the user's download -> branch rebuilt from main (code commit cherry-picked, app/ == 1b122480) with a scrubbed log, force-with-lease pushed (65f5d83c). Backups: refs/backup/20261123/main-before-release-0.2.0 = 4cca0b73, refs/backup/20261123/toolbar-before-scrub = 8af391f3. Mistake caught before push: first ff used the stale local toolbar branch (old commits) -> aborted, reset, redone from origin.
 - Merge: main ff to 65f5d83c, then --no-ff merge of fix/sd-card-step-grow (c9c0920b, log conflict resolved, both entries kept). Checked: BrowserScreen.kt == toolbar build 1b122480; download/, torrent/, DownloadsScreen.kt, tests == SD-fix build b500a6c6.
 - Release cut 5570d9f2: versionCode 2, versionName 0.2.0, README (new features + status). Pushed main; release build CI 45250697025 (workflow_dispatch, headSha 5570d9f2) running.
-- Next: APK from ci-builds -> sha -> releases v0.2.0 in CleanBrowser (tag -> 5570d9f2) + CleanBrowser-releases (Latest) -> verify public download + API.
+- CI 45250697025 GREEN (headSha 5570d9f2; tests ran, no tracking deps, v1+v2+v3, cert a40da80a…). APK CleanBrowser-0.2.0.apk 14,700,513 B, sha256 3ee3a9554f64ec3bf66c22f70dbbd2df6b5778dfede83584e502900d0a7b7169 (dex has share-link, Preparing, Copy address, 0.2.0).
+- Published 14:4x EST: CleanBrowser v0.2.0 (tag -> 5570d9f2a0acc8e40b7bd3f50f06800a17563145) + CleanBrowser-releases v0.2.0 (tag -> cb77e4fc), both Latest, not draft/pre, assets APK + SHA256SUMS. Verified: unauthenticated releases API lists v0.2.0 first (what the updater reads); public downloads from both repos hash 3ee3a955….
+- Slip: pushed log commit b11877b to main while the release build ran (rule: never). No effect (build pinned to 5570d9f2, tag set by full SHA). Added to lessons.
+- Open: toolbar/copy-share + SD multi-connection HTTP not device-tested; in-app updater 0.1.0-test-build -> 0.2.0 not yet tried; branches feat/share-link-magnet, feat/toolbar-new-tab-copy-share, fix/sd-card-step-grow kept (delete on user word).
 
 ## 2026-11-23 — SD-card step-grow fix (MERGED main for 0.2.0; code = tested b500a6c6)
 - Why: 13:13 EST splash hang (incident entry below): old pid stuck in ftruncate(76 GB) via fuse_setattr on the exFAT SD (kernel 6.1 zero-fills on extend); libtorrent sets each file's full size on first write even in sparse mode; the 13:07 pm install killed it mid-call -> unkillable zombie, AM "refused to die" until 13:28. User: "yes fix the sd card torrent bug", plan accepted ("do it"); also covers HTTP downloads to the SD (several connections write at far offsets).
