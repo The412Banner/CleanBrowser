@@ -22,6 +22,7 @@ No accounts, no telemetry, no Google services.
 - Start page with clock, weather, device info, bookmarks and frequent sites — each section can be switched off, or choose a blank page, a search engine or your own home page
 - Address bar autofill and site suggestions (from your history, bookmarks and a built-in list; nothing is sent while typing unless you turn on search suggestions)
 - Site icons, bookmarks, history with search, find in page, desktop mode, pull to refresh
+- New tab button next to the tab counter; tap the address bar on a page to copy or share its address
 - Search engines: Google (default), DuckDuckGo, Brave Search, Startpage, Bing, Ecosia, Qwant, Mojeek or a custom one
 - Themes: system, light, dark, pure black, wallpaper colours (Android 12+) or ten accent colours; address bar at the top or bottom
 
@@ -41,12 +42,13 @@ No accounts, no telemetry, no Google services.
 - Detects when a file changed on the server and restarts it instead of corrupting it
 - Retries, queue, speed limit, Wi-Fi only, optional SHA-256 / MD5 check
 - Save to the Download folder or any folder you pick (SD card included); pre-allocation on internal storage
+- On SD cards (exFAT/FAT, no sparse files) big files are prepared in small steps before writing ("Preparing on SD card"), so the app can always be paused, closed or updated
 - blob: and data: downloads, links from the clipboard or the Share menu
 - Downloads keep running in the background (user-initiated data transfer job on Android 14+, foreground service before), with a silent progress notification and silent Wi-Fi and wake locks
 - Built-in speed test
 
 ### Torrents
-- Magnet links and .torrent files (from pages, files or the Share menu)
+- Magnet links and .torrent files (from pages, files or the Share menu), and μTorrent / BitTorrent Web share links
 - Choose files, sequential download, seeding limits, encryption, DHT / PEX / local peer discovery, UPnP
 - Optional extra public trackers, connection limits, download and upload caps
 - "Only over VPN" switch; free-space check before large torrents
@@ -109,10 +111,11 @@ Stack: Kotlin, Jetpack Compose (Material 3), Android System WebView, OkHttp, SQL
 
 ## Status
 
-0.1.0 is the first release. Used on a Pocket FIT (Android 14): browsing, ad blocking, tabs, menus, start page,
-downloads (multi-connection speed test up to 26 MB/s), adding and downloading a torrent. Not yet tested on a device:
-password autofill, private-tab screenshot / keyboard protection, weather, site icons, Tor, WireGuard, proxy routing
-and the updater (this is the first release it can see).
+0.2.0. Used on a Pocket FIT (Android 14): browsing, ad blocking, tabs, menus, start page, downloads
+(multi-connection speed test up to 26 MB/s), adding and downloading torrents, share links, torrents on the SD card
+(preparing, pause, close and reopen). Not yet tested on a device: the new tab button and the address bar copy/share
+buttons, multi-connection downloads to the SD card, password autofill, private-tab screenshot / keyboard protection,
+weather, site icons, Tor, WireGuard, proxy routing and the updater.
 Please report problems in [Issues](https://github.com/The412Banner/CleanBrowser/issues).
 
 ## Credits

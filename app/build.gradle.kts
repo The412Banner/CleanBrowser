@@ -15,8 +15,8 @@ android {
         minSdk = 29
         targetSdk = 35
         // Bumped only in a release-cut commit.
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
         buildConfigField("String", "UPDATE_REPO", "\"The412Banner/CleanBrowser-releases\"")
         ndk { abiFilters += "arm64-v8a" }
