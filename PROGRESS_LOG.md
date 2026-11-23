@@ -5,6 +5,14 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
+## 2026-11-23 — Magnets from uTorrent/BitTorrent Web share links (feat/share-link-magnet 842984f9, CI running)
+- Why: a utweb.rainberrytv.com/gui/share.html#link=magnet:… link did nothing useful. The page's own script shows "this device isn't supported" on Android/mobile/Linux and only offers its Add torrent button (window.open(magnet)) on desktop, so the browser never saw a magnet. In the Add download box the link started with https and was treated as a file.
+- Built: Urls.magnetIn(url) = the magnet itself, or the `link` value (query or fragment) of a .../gui/share.html page when it decodes to magnet:?. Used in Engine.handleNavigation (link taps/redirects), Tabs.load (address bar, links from other apps; a fresh tab is left blank), Downloads.addUrl + Add download dialog (no file-name/checksum fields). Urls.toUrl keeps typed magnet: links instead of searching them. Other pages with magnets in their address (e.g. in-browser torrent players) are not touched.
+- Tests: UrlsTest.magnets (fragment, query, localhost, non-share pages, non-magnet link value). Not run locally (no Kotlin toolchain here); CI 45227303612 runs them.
+- Device test: NOT done.
+- Open/Next: CI result -> stage APK in Download (hash host+device) -> user yes -> install -> test with a share link (address bar, link tap, Add download). Merge to main only after device test + user go. No release.
+- Resume point: branch feat/share-link-magnet pushed (ls-remote == 842984f9); FIT has v0.1.0 (e9173900) installed.
+
 ## 2026-11-21 — fastlane store metadata (main bbe79855)
 - Why: Orion's submit form auto-fills icon/screenshots only from fastlane paths (or README images; its README icon fallback skips any URL containing "banner", i.e. every The412Banner link).
 - Built: fastlane/metadata/android/en-US/images/icon.png + phoneScreenshots/1-4.png (same files as docs/). Branch feat/fastlane-metadata fast-forwarded to main; backup ref refs/backup/20261121/main-before-fastlane-metadata = 6f682242 (created after the merge: first push failed on a zsh `$VAR:r` modifier; use `${VAR}:refs/...`).
