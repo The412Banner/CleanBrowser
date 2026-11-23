@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import com.banner.cleanbrowser.App
 import com.banner.cleanbrowser.browser.Ui
 import com.banner.cleanbrowser.core.Settings
+import com.banner.cleanbrowser.core.Urls
 import com.banner.cleanbrowser.download.DlItem
 import com.banner.cleanbrowser.download.DlKind
 import com.banner.cleanbrowser.download.DlStatus
@@ -299,7 +300,7 @@ private fun AddDialog(onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(url, { url = it }, label = { Text("Link or magnet") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                if (!url.startsWith("magnet:")) {
+                if (Urls.magnetIn(url) == null) {
                     OutlinedTextField(name, { name = it }, label = { Text("File name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(sum, { sum = it }, label = { Text("SHA-256 or MD5") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }

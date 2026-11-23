@@ -62,6 +62,14 @@ object Tabs {
     }
 
     fun load(tab: Tab, url: String) {
+        Urls.magnetIn(url)?.let { m ->
+            Ui.prompt = Prompt.Magnet(m)
+            if (tab.webView?.url == null) {
+                tab.pendingLoad = null
+                tab.url = ""
+            }
+            return
+        }
         val wv = tab.webView
         if (wv == null) {
             tab.pendingLoad = url

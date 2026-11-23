@@ -233,6 +233,10 @@ object Engine {
         val p = App.prefs.state
         val lower = url.lowercase()
         if (lower.startsWith("http://") || lower.startsWith("https://")) {
+            Urls.magnetIn(url)?.let { m ->
+                Ui.prompt = Prompt.Magnet(m)
+                return true
+            }
             val host = Urls.host(url)
             if (lower.startsWith("http://") && p.httpsOnly && host !in tab.httpAllowed) {
                 tab.upgradedHost = host

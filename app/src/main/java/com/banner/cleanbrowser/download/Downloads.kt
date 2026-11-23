@@ -19,6 +19,7 @@ import com.banner.cleanbrowser.browser.Engine
 import com.banner.cleanbrowser.browser.Prompt
 import com.banner.cleanbrowser.browser.Tab
 import com.banner.cleanbrowser.browser.Ui
+import com.banner.cleanbrowser.core.Urls
 import com.banner.cleanbrowser.net.Net
 import com.banner.cleanbrowser.torrent.Torrents
 import kotlinx.coroutines.CancellationException
@@ -133,7 +134,7 @@ object Downloads {
     /** "Add link" from the Downloads screen. */
     fun addUrl(url: String, name: String?, checksumType: String?, checksum: String?) {
         val u = url.trim()
-        if (u.startsWith("magnet:", true)) { addMagnet(u); return }
+        Urls.magnetIn(u)?.let { addMagnet(it); return }
         if (!(u.startsWith("http://") || u.startsWith("https://"))) { Ui.toast("Not a web address"); return }
         if (u.substringBefore('?').endsWith(".torrent", ignoreCase = true)) { addTorrentUrl(u, null, null); return }
         val n = name?.takeIf { it.isNotBlank() } ?: URLUtil.guessFileName(u, null, null)

@@ -1,5 +1,6 @@
 package com.banner.cleanbrowser.core
 
+import java.net.URLDecoder
 import java.net.URLEncoder
 
 data class SearchEngine(val id: String, val name: String, val searchUrl: String, val suggestUrl: String?) {
@@ -55,7 +56,7 @@ object Urls {
         if (t.isEmpty() || t.contains(' ')) return null
         val lower = t.lowercase()
         if (lower.startsWith("http://") || lower.startsWith("https://")) return t
-        if (lower.startsWith("about:")) return t
+        if (lower.startsWith("about:") || lower.startsWith("magnet:")) return t
         if (lower.startsWith("javascript:") || lower.startsWith("file:") || lower.startsWith("content:")) return null
         if (schemeRe.containsMatchIn(t) && !t.contains("://") && !hostLike.matches(t)) {
             // e.g. "mailto:x", "intent:..." stay as they are; "example.com:8080" is a host.
@@ -130,6 +131,26 @@ object Urls {
     fun isThirdParty(requestHost: String, pageHost: String): Boolean {
         if (pageHost.isEmpty() || requestHost.isEmpty()) return false
         return site(requestHost) != site(pageHost)
+    }
+
+    /**
+     * The magnet link in [url]: the link itself, or the one inside a μTorrent / BitTorrent Web
+     * share page (…/gui/share.html#link=magnet:…), which only hands it over on desktop systems.
+     */
+    fun magnetIn(url: String): String? {
+        val t = url.trim()
+        if (t.startsWith("magnet:", ignoreCase = true)) return t
+        if (!isWeb(t)) return null
+        val noFragment = t.substringBefore('#')
+        val path = noFragment.substringBefore('?').substringAfter("://").substringAfter('/', "")
+        if (!path.endsWith("gui/share.html", ignoreCase = true)) return null
+        val params = t.substringAfter('#', "").split('&') + noFragment.substringAfter('?', "").split('&')
+        for (p in params) {
+            if (p.substringBefore('=') != "link") continue
+            val v = runCatching { URLDecoder.decode(p.substringAfter('=', ""), "UTF-8") }.getOrNull() ?: continue
+            if (v.startsWith("magnet:?", ignoreCase = true)) return v
+        }
+        return null
     }
 
     /** First http(s) URL inside shared text, if any. */

@@ -20,6 +20,21 @@ class UrlsTest {
         assertEquals("mailto:a@b.com", Urls.toUrl("mailto:a@b.com"))
     }
 
+    @Test fun magnets() {
+        val m = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Example.File&tr=udp%3a%2f%2ftracker.example.org%3a1337%2fannounce"
+        val enc = "magnet%3A%3Fxt%3Durn%3Abtih%3A0123456789abcdef0123456789abcdef01234567%26dn%3DExample.File" +
+            "%26tr%3Dudp%253a%252f%252ftracker.example.org%253a1337%252fannounce"
+        assertEquals(m, Urls.magnetIn(m))
+        assertEquals(m, Urls.magnetIn("https://utweb.rainberrytv.com/gui/share.html#link=$enc"))
+        assertEquals(m, Urls.magnetIn("https://btweb.rainberrytv.com/gui/share.html?link=$enc"))
+        assertEquals(m, Urls.magnetIn("http://127.0.0.1:19575/gui/share.html#x=1&link=$enc"))
+        assertNull(Urls.magnetIn("https://webtor.example/#/show?magnet=$enc"))
+        assertNull(Urls.magnetIn("https://example.com/?link=$enc"))
+        assertNull(Urls.magnetIn("https://utweb.rainberrytv.com/gui/share.html#link=https%3A%2F%2Fexample.com"))
+        assertNull(Urls.magnetIn("https://example.com/"))
+        assertEquals(m, Urls.toUrl(m))
+    }
+
     @Test fun hosts() {
         assertEquals("www.example.com", Urls.host("https://user:pw@WWW.Example.com:443/path?q#f"))
         assertEquals("example.com", Urls.display("https://www.example.com/a"))
