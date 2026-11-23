@@ -9,6 +9,7 @@ Newest first.
 - 13:13 EST user: app "just sits there" on the splash. ActivityManager: old pid 17707 "refused to die ... cancelling the process start" (same pattern as 11-19 22:55).
 - Cause: pid 17707 (3def5445 build) = zombie; thread 19382 (comm DefaultDispatch = libtorrent thread inheriting the creator's name) in D state: ftruncate(fd 215, 76,155,065,056) via fuse_setattr on /storage/7B7F-E3AA/Android/data/com.banner.cleanbrowser/files/<torrent>/levels.rpf (exFAT, kernel 6.1 = zero-fill on extend). Torrent was SPARSE mode (SD = not preallocOk), so libtorrent 2.x itself sizes files to full length (mmap disk I/O). The 13:07 pm install killed the process mid-ftruncate -> unkillable zombie until the zero-fill ends.
 - State: downloads.db has 0 rows (last write 12:58; user removed the torrent + Big Buck Bunny before the install). Torrent folder on SD ~70 GB (levels.rpf, packs.rpf 4.8 GB, data/). Zero-fill measured ~42 MB/s, ~9 GB left at 13:24 -> expected end ~13:28 EST.
+- 13:28:01 EST zombie GONE on its own (levels.rpf reached 76,155,065,056 B); no Clean Browser process left, crash buffer 0; app free to start (user not yet confirmed).
 - Lesson: never install/kill Clean Browser while a torrent writes to the SD card; check /proc/<pid>/task/*/wchan for fuse first.
 - Open: code fix for torrents on exFAT SD (no full-size ftruncate; e.g. posix disk I/O + in-order pieces, or block SD torrents) -> propose to user, not built.
 
