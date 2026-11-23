@@ -5,6 +5,13 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
+## 2026-11-23 — New-tab + button, menu + icon, copy/share in the address bar (feat/toolbar-new-tab-copy-share 1b122480, CI running)
+- Why (user, with 2 screenshots of start page + menu): "+ button next to open tabs box", "move New tab to the top buttons row as a + button", "tap the address bar on a site -> copy address quick button and share option". Plan confirmed by user ("ok").
+- Built (BrowserScreen.kt only): Toolbar + IconButton before TabsButton -> Browser.newTab(tab.isPrivate); MenuSheet icon row gets + (Browser.newTab(false)) after Share, "New tab" list item removed ("New private tab" stays); Suggestions(current=open web tab, onDone) shows CurrentPageRow (site icon, title, url, Copy -> Browser.copy + toast "Address copied", Share -> Browser.share; both close editing) while nothing is typed. Reuses existing Browser.copy/share + AppIcons.Copy.
+- CI 45233923962 running. NOT device-tested.
+- Open/Next: CI -> stage APK -> ask user -> install -> user checks the 3 items (toolbar width on FIT, private tab +, copy toast).
+- Resume point: branch pushed (ls-remote == 1b122480); FIT runs 3def5445 (= main code).
+
 ## 2026-11-23 — Magnets from uTorrent/BitTorrent Web share links (MERGED main 8a1ccd18; code = tested 3def5445)
 - Why: a utweb.rainberrytv.com/gui/share.html#link=magnet:… link did nothing useful. The page's own script shows "this device isn't supported" on Android/mobile/Linux and only offers its Add torrent button (window.open(magnet)) on desktop, so the browser never saw a magnet. In the Add download box the link started with https and was treated as a file.
 - Built: Urls.magnetIn(url) = the magnet itself, or the `link` value (query or fragment) of a .../gui/share.html page when it decodes to magnet:?. Used in Engine.handleNavigation (link taps/redirects), Tabs.load (address bar, links from other apps; a fresh tab is left blank), Downloads.addUrl + Add download dialog (no file-name/checksum fields). Urls.toUrl keeps typed magnet: links instead of searching them. Other pages with magnets in their address (e.g. in-browser torrent players) are not touched.
