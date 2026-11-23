@@ -5,7 +5,7 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
-## 2026-11-23 — Magnets from uTorrent/BitTorrent Web share links (feat/share-link-magnet 3def5445, DEVICE-PROVEN, merge awaits user go)
+## 2026-11-23 — Magnets from uTorrent/BitTorrent Web share links (MERGED main 8a1ccd18; code = tested 3def5445)
 - Why: a utweb.rainberrytv.com/gui/share.html#link=magnet:… link did nothing useful. The page's own script shows "this device isn't supported" on Android/mobile/Linux and only offers its Add torrent button (window.open(magnet)) on desktop, so the browser never saw a magnet. In the Add download box the link started with https and was treated as a file.
 - Built: Urls.magnetIn(url) = the magnet itself, or the `link` value (query or fragment) of a .../gui/share.html page when it decodes to magnet:?. Used in Engine.handleNavigation (link taps/redirects), Tabs.load (address bar, links from other apps; a fresh tab is left blank), Downloads.addUrl + Add download dialog (no file-name/checksum fields). Urls.toUrl keeps typed magnet: links instead of searching them. Other pages with magnets in their address (e.g. in-browser torrent players) are not touched.
 - Tests: UrlsTest.magnets (fragment, query, localhost, non-share pages, non-magnet link value). Not run locally (no Kotlin toolchain here); CI 45227303612 runs them.
@@ -16,8 +16,9 @@ Newest first.
 - 3def5445: CI 45230464015 GREEN (headSha 3def5445, testReleaseUnitTest ran, no tracking deps, v1+v2+v3). APK sha256 35fd7091…072b staged /sdcard/Download/CleanBrowser-share-link-magnet-3def5445.apk (hash same via root). User: "install it when ready".
 - 3def5445 INSTALLED 12:45 EST (pm Success; installed base.apk sha256 35fd7091…072b = staged; crash buffer 0). Feature test pending (user).
 - User test 12:47 EST on 3def5445 (same wrapped copy of the share link): torrent added + RUNNING (screenshot 17/276 MB, 2.3 MB/s, 54/58 peers). downloads.db row 24 url = clean magnet (no line break), status RUNNING, 95 MB done at check; old failed row 23 deleted by user; crash buffer 0. Entry point used not confirmed (likely Add download); address bar / link tap / other-app paths not yet proven.
-- Open/Next: CI result -> stage APK in Download (hash host+device) -> user yes -> install -> test with a share link (address bar, link tap, Add download). Merge to main only after device test + user go. No release.
-- Resume point: branch feat/share-link-magnet pushed (ls-remote == 842984f9); FIT has v0.1.0 (e9173900) installed.
+- MERGED: user "merge it" -> main fast-forwarded to 8a1ccd18 (app/ identical to tested 3def5445; only this log differs). Backup ref refs/backup/20261123/main-before-share-link-magnet = b7d83bee. Branch feat/share-link-magnet kept (delete only on user word).
+- Open/Next: no release (user decides). Unproven entry points: address bar, link tap in a page, link from another app. FIT runs 3def5445 (versionName 0.1.0, same code as main).
+- Resume point: main 8a1ccd18 has the fix; FIT has 3def5445 installed; nothing in flight.
 
 ## 2026-11-21 — fastlane store metadata (main bbe79855)
 - Why: Orion's submit form auto-fills icon/screenshots only from fastlane paths (or README images; its README icon fallback skips any URL containing "banner", i.e. every The412Banner link).
