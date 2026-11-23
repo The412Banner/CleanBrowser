@@ -5,6 +5,13 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
+## 2026-11-23 — Release 0.2.0 in progress (main 5570d9f2)
+- User: "merge to main, release a new stable"; asked how, picked "Release everything now" (toolbar buttons + copy/share NOT device-tested; recorded in its entry).
+- Before merge: toolbar branch log had the SD card id + file names from the user's download -> branch rebuilt from main (code commit cherry-picked, app/ == 1b122480) with a scrubbed log, force-with-lease pushed (65f5d83c). Backups: refs/backup/20261123/main-before-release-0.2.0 = 4cca0b73, refs/backup/20261123/toolbar-before-scrub = 8af391f3. Mistake caught before push: first ff used the stale local toolbar branch (old commits) -> aborted, reset, redone from origin.
+- Merge: main ff to 65f5d83c, then --no-ff merge of fix/sd-card-step-grow (c9c0920b, log conflict resolved, both entries kept). Checked: BrowserScreen.kt == toolbar build 1b122480; download/, torrent/, DownloadsScreen.kt, tests == SD-fix build b500a6c6.
+- Release cut 5570d9f2: versionCode 2, versionName 0.2.0, README (new features + status). Pushed main; release build CI 45250697025 (workflow_dispatch, headSha 5570d9f2) running.
+- Next: APK from ci-builds -> sha -> releases v0.2.0 in CleanBrowser (tag -> 5570d9f2) + CleanBrowser-releases (Latest) -> verify public download + API.
+
 ## 2026-11-23 — SD-card step-grow fix (MERGED main for 0.2.0; code = tested b500a6c6)
 - Why: 13:13 EST splash hang (incident entry below): old pid stuck in ftruncate(76 GB) via fuse_setattr on the exFAT SD (kernel 6.1 zero-fills on extend); libtorrent sets each file's full size on first write even in sparse mode; the 13:07 pm install killed it mid-call -> unkillable zombie, AM "refused to die" until 13:28. User: "yes fix the sd card torrent bug", plan accepted ("do it"); also covers HTTP downloads to the SD (several connections write at far offsets).
 - Research: libtorrent master/2.1 (jlibtorrent 2.1.2.1 = libtorrent 2.1.2.0): pread + mmap storage open new files with open_mode::truncate -> ftruncate(full size) (file.cpp:726, no O_TRUNC, so an already full-size file is left alone); posix storage does not pre-size but fopen()s per 16 KiB block on the network thread (posix_disk_io.cpp:41) -> measured FUSE open+close 0.19 ms SD / 0.22 ms internal -> rejected. stop_when_ready counts downloading_metadata as downloading (torrent.cpp:137) -> unusable for magnets; SessionManager.fetchMagnet(uri, timeout, tmp) used instead.
