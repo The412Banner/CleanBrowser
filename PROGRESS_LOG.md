@@ -5,11 +5,12 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
-## 2026-11-23 — Magnets from uTorrent/BitTorrent Web share links (feat/share-link-magnet 842984f9, CI running)
+## 2026-11-23 — Magnets from uTorrent/BitTorrent Web share links (feat/share-link-magnet 842984f9, CI green, staged)
 - Why: a utweb.rainberrytv.com/gui/share.html#link=magnet:… link did nothing useful. The page's own script shows "this device isn't supported" on Android/mobile/Linux and only offers its Add torrent button (window.open(magnet)) on desktop, so the browser never saw a magnet. In the Add download box the link started with https and was treated as a file.
 - Built: Urls.magnetIn(url) = the magnet itself, or the `link` value (query or fragment) of a .../gui/share.html page when it decodes to magnet:?. Used in Engine.handleNavigation (link taps/redirects), Tabs.load (address bar, links from other apps; a fresh tab is left blank), Downloads.addUrl + Add download dialog (no file-name/checksum fields). Urls.toUrl keeps typed magnet: links instead of searching them. Other pages with magnets in their address (e.g. in-browser torrent players) are not touched.
 - Tests: UrlsTest.magnets (fragment, query, localhost, non-share pages, non-magnet link value). Not run locally (no Kotlin toolchain here); CI 45227303612 runs them.
-- Device test: NOT done.
+- CI 45227303612 GREEN (headSha 842984f9; testReleaseUnitTest ran, no tracking deps, v1+v2+v3 verified). APK CleanBrowser-0.1.0-842984f9.apk 14,688,225 B sha256 49bdf671…1b9f (differs from v0.1.0; dex contains the new code). Staged /sdcard/Download/CleanBrowser-share-link-magnet-842984f9.apk, hash same in container and via root.
+- Device test: NOT done (install awaits user yes).
 - Open/Next: CI result -> stage APK in Download (hash host+device) -> user yes -> install -> test with a share link (address bar, link tap, Add download). Merge to main only after device test + user go. No release.
 - Resume point: branch feat/share-link-magnet pushed (ls-remote == 842984f9); FIT has v0.1.0 (e9173900) installed.
 
