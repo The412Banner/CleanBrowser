@@ -9,7 +9,9 @@ import com.banner.cleanbrowser.core.Settings
 import com.banner.cleanbrowser.download.DlItem
 import com.banner.cleanbrowser.download.DlStatus
 import com.banner.cleanbrowser.download.Downloads
+import com.banner.cleanbrowser.download.FilePrep
 import com.banner.cleanbrowser.download.KeepAlive
+import com.banner.cleanbrowser.download.Storage
 import com.banner.cleanbrowser.net.WireGuard
 import com.frostwire.jlibtorrent.AddTorrentParams
 import com.frostwire.jlibtorrent.Priority
@@ -25,10 +27,14 @@ import com.frostwire.jlibtorrent.TorrentInfo
 import com.frostwire.jlibtorrent.TorrentStatus
 import com.frostwire.jlibtorrent.swig.settings_pack
 import com.frostwire.jlibtorrent.swig.torrent_flags_t
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
@@ -44,6 +50,10 @@ object Torrents {
     @Volatile private var held = false
     private var poller = false
     private lateinit var ctx: Context
+    /** Add jobs per item, so a resume never runs two at once. */
+    private val addJobs = java.util.concurrent.ConcurrentHashMap<Long, Job>()
+    /** Items growing a newly selected file; the poller leaves them alone meanwhile. */
+    private val preparing = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
 
     fun nameOf(bytes: ByteArray): String? = runCatching { TorrentInfo.bdecode(bytes).name() }.getOrNull()
 
@@ -68,18 +78,35 @@ object Torrents {
     }
 
     fun add(c: Context, d: DlItem) {
-        scope.launch {
+        addJobs.remove(d.id)?.cancel()
+        addJobs[d.id] = scope.launch {
             try {
                 val s = ensureSession(c)
                 val dir = File(d.folder).apply { mkdirs() }
-                val params = if (d.url.startsWith("magnet:")) {
+                val magnet = d.url.startsWith("magnet:")
+                // SD cards (exFAT/FAT): libtorrent sets each file's full size the first time it writes to
+                // it, which zero-fills the whole file in one call. Get the file list first and grow the
+                // files in small steps before the torrent is added.
+                val stepGrow = !Storage.preallocOk(d.folder)
+                var ti: TorrentInfo? = if (magnet) null else TorrentInfo(File(d.url.removePrefix("file:")))
+                if (stepGrow && ti == null) ti = metadata(s, d) ?: return@launch
+                val info = ti
+                if (info != null) {
+                    d.infoHash = info.infoHashV1().toHex()
+                    d.total = info.totalSize()
+                }
+                if (stepGrow && info != null) {
+                    if (!prepare(d, info, dir, null)) return@launch
+                    main.post { spaceChecked += d.id } // space was checked before growing
+                }
+                val params = if (info == null) {
                     d.status = DlStatus.METADATA
                     AddTorrentParams.parseMagnetUri(d.url)
                 } else {
-                    val ti = TorrentInfo(File(d.url.removePrefix("file:")))
-                    d.infoHash = ti.infoHashV1().toHex()
-                    d.total = ti.totalSize()
-                    AddTorrentParams.createInstance().also { it.torrentInfo(ti) }
+                    AddTorrentParams.createInstance().also { p ->
+                        p.torrentInfo(info)
+                        if (magnet) runCatching { p.trackers(AddTorrentParams.parseMagnetUri(d.url).trackers()) }
+                    }
                 }
                 params.savePath(dir.absolutePath)
                 if (App.prefs.state.torExtraTrackers) {
@@ -103,12 +130,68 @@ object Torrents {
                     }
                     delay(250)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Throwable) {
                 d.status = DlStatus.FAILED
                 d.errorText = e.message ?: "Could not add torrent"
                 Downloads.persist(d)
             }
         }
+    }
+
+    private fun wanted(d: DlItem) = d.status != DlStatus.PAUSED && Downloads.items.any { it.id == d.id }
+
+    private fun infoFile(d: DlItem) = File(App.instance.filesDir, "torrents/item-${d.id}.torrent")
+
+    /** A magnet's file list: the saved copy, or fetched from peers without writing to the save folder. */
+    private suspend fun metadata(s: SessionManager, d: DlItem): TorrentInfo? {
+        val f = infoFile(d)
+        if (f.exists()) runCatching { return TorrentInfo(f) }
+        d.status = DlStatus.METADATA
+        val tmp = File(ctx.cacheDir, "magnet").apply { mkdirs() }
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            if (!wanted(d)) return null
+            if (held) { delay(2000); continue }
+            val bytes = runCatching { s.fetchMagnet(d.url, 30, tmp) }.getOrNull() ?: continue
+            f.parentFile?.mkdirs()
+            f.writeBytes(bytes)
+            return TorrentInfo(bytes)
+        }
+    }
+
+    /**
+     * Grows the torrent's files (all, or the indexes in [only]) to full size in small steps.
+     * False when paused, removed or out of space.
+     */
+    private suspend fun prepare(d: DlItem, ti: TorrentInfo, dir: File, only: Set<Int>?): Boolean {
+        val fs = ti.files()
+        val todo = (0 until fs.numFiles()).filter { (only == null || it in only) && !fs.padFileAt(it) }
+            .map { File(dir, fs.filePath(it)) to fs.fileSize(it) }
+        val total = todo.sumOf { it.second }
+        var done = todo.sumOf { (f, size) -> minOf(f.length(), size) }
+        if (done >= total) return true
+        val free = Storage.free(d.folder)
+        if (free in 0 until total - done) {
+            d.errorText = "Not enough storage: needs ${(total - done) / 1_073_741_824} GB, ${free / 1_073_741_824} GB free"
+            if (only == null) d.status = DlStatus.PAUSED // not added yet; a running torrent keeps running
+            Downloads.persist(d)
+            return false
+        }
+        val context = currentCoroutineContext()
+        d.prepTotal = total
+        d.prepDone = done
+        d.status = DlStatus.PREPARING
+        Downloads.persist(d)
+        for ((f, size) in todo) {
+            val start = minOf(f.length(), size)
+            val base = done
+            val ok = FilePrep.grow(f, size, cancelled = { !context.isActive || !wanted(d) }) { d.prepDone = base + (it - start) }
+            if (!ok) return false
+            done = base + (size - start)
+        }
+        return true
     }
 
     private fun magnetHash(uri: String): String? =
@@ -126,6 +209,7 @@ object Torrents {
     }
 
     fun pause(d: DlItem) {
+        addJobs.remove(d.id)?.cancel()
         handles[d.id]?.let { h -> runCatching { h.unsetFlags(TorrentFlags.AUTO_MANAGED); h.pause(); h.saveResumeData() } }
     }
 
@@ -136,10 +220,29 @@ object Torrents {
     }
 
     fun remove(d: DlItem, deleteFiles: Boolean) {
-        val h = handles.remove(d.id) ?: return
-        val s = session ?: return
-        runCatching { if (deleteFiles) s.remove(h, SessionHandle.DELETE_FILES) else s.remove(h) }
-        if (d.url.startsWith("file:")) runCatching { File(d.url.removePrefix("file:")).delete() }
+        val job = addJobs.remove(d.id)?.also { it.cancel() }
+        val h = handles.remove(d.id)
+        val s = session
+        if (h != null && s != null) runCatching { if (deleteFiles) s.remove(h, SessionHandle.DELETE_FILES) else s.remove(h) }
+        val info = infoFile(d)
+        scope.launch {
+            job?.join()
+            // Removed while getting the file list or growing files: libtorrent never had these files.
+            if (h == null && deleteFiles) {
+                val ti = runCatching { if (info.exists()) TorrentInfo(info) else TorrentInfo(File(d.url.removePrefix("file:"))) }.getOrNull()
+                val name = ti?.name()
+                if (!name.isNullOrBlank()) runCatching {
+                    val root = File(d.folder).canonicalFile
+                    val target = File(root, name).canonicalFile
+                    // Only the torrent's own file or folder directly inside the download folder.
+                    if (target.parentFile == root && target != root) {
+                        if (target.isDirectory) target.deleteRecursively() else target.delete()
+                    }
+                }
+            }
+            if (d.url.startsWith("file:")) runCatching { File(d.url.removePrefix("file:")).delete() }
+            runCatching { info.delete() }
+        }
     }
 
     fun setSequential(d: DlItem, on: Boolean) {
@@ -161,7 +264,23 @@ object Torrents {
     }
 
     fun setWanted(d: DlItem, index: Int, wanted: Boolean) {
-        handles[d.id]?.let { h -> runCatching { h.filePriority(index, if (wanted) Priority.NORMAL else Priority.IGNORE) } }
+        val h = handles[d.id] ?: return
+        if (wanted && !Storage.preallocOk(d.folder)) {
+            // Grow the file before libtorrent writes into it (see add).
+            if (!preparing.add(d.id)) return
+            scope.launch {
+                val before = d.status
+                try {
+                    val ti = runCatching { h.torrentFile() }.getOrNull() ?: return@launch
+                    if (prepare(d, ti, File(d.folder), setOf(index))) runCatching { h.filePriority(index, Priority.NORMAL) }
+                } finally {
+                    preparing -= d.id
+                    if (d.status == DlStatus.PREPARING) d.status = before
+                }
+            }
+            return
+        }
+        runCatching { h.filePriority(index, if (wanted) Priority.NORMAL else Priority.IGNORE) }
     }
 
     /** Applies settings, the kill switch and "only over VPN". */
@@ -282,6 +401,7 @@ object Torrents {
         var changed = false
         for ((id, s) in updates) {
             val d = Downloads.items.firstOrNull { it.id == id } ?: continue
+            if (id in preparing) continue
             // Once the size is known, make sure it fits; pause instead of filling the storage.
             if (s.total > 0 && id !in spaceChecked) {
                 spaceChecked += id

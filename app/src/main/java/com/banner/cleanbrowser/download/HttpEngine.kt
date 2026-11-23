@@ -192,6 +192,7 @@ class HttpEngine(private val ctx: Context, private val item: DlItem, private val
         val sink = openSink()
         try {
             if (segments.isEmpty()) loadOrPlan(sink)
+            prepare(sink)
             item.status = DlStatus.RUNNING
             val workers = ArrayList<kotlinx.coroutines.Job>()
             val single = synchronized(lock) { segments.size == 1 && segments[0].end < 0 }
@@ -310,6 +311,26 @@ class HttpEngine(private val ctx: Context, private val item: DlItem, private val
         if (!callbacks.preallocate || !Storage.preallocOk(item.folder)) return
         runCatching { android.system.Os.posix_fallocate(sink.fd, 0, total) }
         // No fallback: extending the file by hand can mean writing zeros through all of it.
+    }
+
+    /**
+     * On storage without sparse files (SD cards), several connections writing at different offsets
+     * would make the kernel zero-fill up to each offset in one long call. Grow the file in steps first.
+     */
+    private suspend fun prepare(sink: Sink) {
+        val total = item.total
+        if (total <= 0 || sink is NullSink || Storage.preallocOk(item.folder)) return
+        if (synchronized(lock) { segments.size } < 2) return
+        val have = runCatching { android.system.Os.fstat(sink.fd).st_size }.getOrDefault(0L)
+        if (have >= total) return
+        val context = kotlinx.coroutines.currentCoroutineContext()
+        item.prepTotal = total
+        item.prepDone = have
+        item.status = DlStatus.PREPARING
+        val ok = withContext(Dispatchers.IO) {
+            FilePrep.grow(sink.fd, total, cancelled = { !context.isActive }) { item.prepDone = it }
+        }
+        if (!ok) throw CancellationException("Paused")
     }
 
     private fun split(): Segment? = synchronized(lock) {
