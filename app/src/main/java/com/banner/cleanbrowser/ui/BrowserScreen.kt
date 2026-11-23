@@ -200,6 +200,7 @@ fun BrowserScreen(onQuit: () -> Unit) {
             onStopEdit = { editing = false },
             onGo = { Browser.go(tab, it); editing = false },
             onTabs = { Tabs.captureThumbnail(tab); Nav.showPrivateTabs = tab.isPrivate; Nav.open(Screen.TABS) },
+            onNewTab = { Browser.newTab(tab.isPrivate) },
             onMenu = { menu = true },
             onShield = { siteSheet = true },
         )
@@ -221,10 +222,16 @@ fun BrowserScreen(onQuit: () -> Unit) {
                 enter = fadeIn(Motion.fast()),
                 exit = fadeOut(Motion.fast()),
             ) {
-                Suggestions(typed, onPick = { Browser.go(tab, it); editing = false }, onFill = {
-                    field = TextFieldValue(it, TextRange(it.length))
-                    typed = it
-                })
+                Suggestions(
+                    typed,
+                    current = tab.takeIf { !it.isBlank && Urls.isWeb(it.url) },
+                    onPick = { Browser.go(tab, it); editing = false },
+                    onFill = {
+                        field = TextFieldValue(it, TextRange(it.length))
+                        typed = it
+                    },
+                    onDone = { editing = false },
+                )
             }
             androidx.compose.animation.AnimatedVisibility(
                 visible = Ui.findBar,
@@ -257,6 +264,7 @@ private fun Toolbar(
     onStopEdit: () -> Unit,
     onGo: (String) -> Unit,
     onTabs: () -> Unit,
+    onNewTab: () -> Unit,
     onMenu: () -> Unit,
     onShield: () -> Unit,
 ) {
@@ -318,6 +326,7 @@ private fun Toolbar(
             }
         }
         if (!editing) {
+            IconButton(onClick = onNewTab) { Icon(Icons.Filled.Add, "New tab", tint = MaterialTheme.colorScheme.onSurface) }
             TabsButton(Tabs.list.count { it.isPrivate == tab.isPrivate }, onTabs)
             IconButton(onClick = onMenu) { Icon(Icons.Filled.MoreVert, "Menu", tint = MaterialTheme.colorScheme.onSurface) }
         } else {
@@ -410,8 +419,9 @@ private fun androidx.compose.ui.graphics.Color.toArgbInt(): Int = android.graphi
 )
 
 @Composable
-private fun Suggestions(text: String, onPick: (String) -> Unit, onFill: (String) -> Unit) {
+private fun Suggestions(text: String, current: Tab?, onPick: (String) -> Unit, onFill: (String) -> Unit, onDone: () -> Unit) {
     val s = App.prefs.state
+    val ctx = LocalContext.current
     var local by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var remote by remember { mutableStateOf<List<String>>(emptyList()) }
     var sites by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -428,6 +438,9 @@ private fun Suggestions(text: String, onPick: (String) -> Unit, onFill: (String)
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         LazyColumn(Modifier.fillMaxSize()) {
+            if (text.isBlank() && current != null) {
+                item { CurrentPageRow(current, ctx, onFill, onDone) }
+            }
             if (text.isNotBlank()) {
                 val asUrl = Urls.toUrl(text)
                 item {
@@ -458,6 +471,30 @@ private fun Suggestions(text: String, onPick: (String) -> Unit, onFill: (String)
             }
         }
     }
+}
+
+/** The open page's address with quick Copy and Share buttons. */
+@Composable
+private fun CurrentPageRow(tab: Tab, ctx: Context, onFill: (String) -> Unit, onDone: () -> Unit) {
+    val url = tab.url
+    Row(
+        Modifier.fillMaxWidth().clickable { onFill(url) }.padding(start = 20.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SiteIcon(url, 28.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+            Text(tab.title.ifBlank { Urls.display(url) }, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+            Text(url, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = { Browser.copy(ctx, url); Ui.toast("Address copied"); onDone() }) {
+            Icon(AppIcons.Copy, "Copy address", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = { Browser.share(ctx, url, tab.title); onDone() }) {
+            Icon(Icons.Filled.Share, "Share", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    Divider()
 }
 
 private fun fetchSuggestions(q: String): List<String> = runCatching {
@@ -558,10 +595,10 @@ private fun MenuSheet(tab: Tab, onDismiss: () -> Unit, onQuit: () -> Unit) {
                     tint = if (bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
             }
             IconButton(onClick = { Browser.share(ctx, tab.url, tab.title); onDismiss() }, enabled = !tab.isBlank) { Icon(Icons.Filled.Share, "Share") }
+            IconButton(onClick = { Browser.newTab(false); onDismiss() }) { Icon(Icons.Filled.Add, "New tab") }
         }
         Spacer(Modifier.height(4.dp))
         Divider()
-        MenuItem(Icons.Filled.Add, "New tab") { Browser.newTab(false); onDismiss() }
         MenuItem(AppIcons.Private, "New private tab") { Browser.newTab(true); onDismiss() }
         MenuItem(AppIcons.Bookmark, "Bookmarks") { Nav.open(Screen.BOOKMARKS); onDismiss() }
         MenuItem(AppIcons.History, "History") { Nav.open(Screen.HISTORY); onDismiss() }
