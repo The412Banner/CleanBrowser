@@ -33,6 +33,16 @@ class UrlsTest {
         assertNull(Urls.magnetIn("https://utweb.rainberrytv.com/gui/share.html#link=https%3A%2F%2Fexample.com"))
         assertNull(Urls.magnetIn("https://example.com/"))
         assertEquals(m, Urls.toUrl(m))
+        // A link copied from a wrapped line: line break + indent inside the hash.
+        assertEquals(m, Urls.magnetIn(m.substring(0, 35) + "\n  " + m.substring(35)))
+        assertEquals(m, Urls.magnetIn("https://utweb.rainberrytv.com/gui/share.html#link=" + enc.substring(0, 50) + "\r\n " + enc.substring(50)))
+    }
+
+    @Test fun wrappedLinks() {
+        assertEquals("https://example.com/abc", Urls.toUrl("https://example.com/a\n  bc"))
+        assertEquals("https://example.com/abc", Urls.unwrap("  https://example.com/ab\nc "))
+        assertEquals("two\nlines", Urls.unwrap("two\nlines"))
+        assertNull(Urls.toUrl("hello\nworld"))
     }
 
     @Test fun hosts() {

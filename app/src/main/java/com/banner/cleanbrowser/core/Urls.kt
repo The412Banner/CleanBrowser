@@ -52,7 +52,7 @@ object Urls {
 
     /** Turns address-bar text into a URL to load, or null when it should be searched. */
     fun toUrl(input: String): String? {
-        val t = input.trim()
+        val t = unwrap(input)
         if (t.isEmpty() || t.contains(' ')) return null
         val lower = t.lowercase()
         if (lower.startsWith("http://") || lower.startsWith("https://")) return t
@@ -133,12 +133,22 @@ object Urls {
         return site(requestHost) != site(pageHost)
     }
 
+    private val lineBreak = Regex("\\s*[\\r\\n]+\\s*")
+
+    /** Trims [input]; a pasted link also loses the line breaks (and spaces around them) that copying a wrapped line adds. */
+    fun unwrap(input: String): String {
+        val t = input.trim()
+        val lower = t.lowercase()
+        if (!(lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("magnet:"))) return t
+        return t.replace(lineBreak, "")
+    }
+
     /**
      * The magnet link in [url]: the link itself, or the one inside a μTorrent / BitTorrent Web
      * share page (…/gui/share.html#link=magnet:…), which only hands it over on desktop systems.
      */
     fun magnetIn(url: String): String? {
-        val t = url.trim()
+        val t = unwrap(url)
         if (t.startsWith("magnet:", ignoreCase = true)) return t
         if (!isWeb(t)) return null
         val noFragment = t.substringBefore('#')

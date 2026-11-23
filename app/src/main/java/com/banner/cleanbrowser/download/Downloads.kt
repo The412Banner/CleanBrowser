@@ -133,7 +133,7 @@ object Downloads {
 
     /** "Add link" from the Downloads screen. */
     fun addUrl(url: String, name: String?, checksumType: String?, checksum: String?) {
-        val u = url.trim()
+        val u = Urls.unwrap(url)
         Urls.magnetIn(u)?.let { addMagnet(it); return }
         if (!(u.startsWith("http://") || u.startsWith("https://"))) { Ui.toast("Not a web address"); return }
         if (u.substringBefore('?').endsWith(".torrent", ignoreCase = true)) { addTorrentUrl(u, null, null); return }
