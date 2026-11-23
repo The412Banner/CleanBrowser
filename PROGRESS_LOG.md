@@ -5,6 +5,21 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
+## 2026-11-23 — INCIDENT: splash hang after the 13:07 install (torrent on exFAT SD)
+- 13:13 EST user: app "just sits there" on the splash. ActivityManager: old pid 17707 "refused to die ... cancelling the process start" (same pattern as 11-19 22:55).
+- Cause: pid 17707 (3def5445 build) = zombie; thread 19382 (comm DefaultDispatch = libtorrent thread inheriting the creator's name) in D state: ftruncate(fd 215, 76,155,065,056) via fuse_setattr on the torrent's largest file in the app folder on the SD card (exFAT, kernel 6.1 = zero-fill on extend). Torrent was SPARSE mode (SD = not preallocOk), so libtorrent 2.x itself sizes files to full length (mmap disk I/O). The 13:07 pm install killed the process mid-ftruncate -> unkillable zombie until the zero-fill ends.
+- State: downloads.db has 0 rows (last write 12:58; user removed the torrent + Big Buck Bunny before the install). Torrent folder on the SD ~70 GB. Zero-fill measured ~42 MB/s, ~9 GB left at 13:24 -> expected end ~13:28 EST.
+- 13:28:01 EST zombie GONE on its own (the file reached 76,155,065,056 B); no Clean Browser process left, crash buffer 0; app free to start (user not yet confirmed).
+- Lesson: never install/kill Clean Browser while a torrent writes to the SD card; check /proc/<pid>/task/*/wchan for fuse first.
+- Open: code fix for torrents on exFAT SD (no full-size ftruncate; e.g. posix disk I/O + in-order pieces, or block SD torrents) -> propose to user, not built.
+
+## 2026-11-23 — New-tab + button, menu + icon, copy/share in the address bar (feat/toolbar-new-tab-copy-share 1b122480, INSTALLED, user test pending)
+- Why (user, with 2 screenshots of start page + menu): "+ button next to open tabs box", "move New tab to the top buttons row as a + button", "tap the address bar on a site -> copy address quick button and share option". Plan confirmed by user ("ok").
+- Built (BrowserScreen.kt only): Toolbar + IconButton before TabsButton -> Browser.newTab(tab.isPrivate); MenuSheet icon row gets + (Browser.newTab(false)) after Share, "New tab" list item removed ("New private tab" stays); Suggestions(current=open web tab, onDone) shows CurrentPageRow (site icon, title, url, Copy -> Browser.copy + toast "Address copied", Share -> Browser.share; both close editing) while nothing is typed. Reuses existing Browser.copy/share + AppIcons.Copy.
+- CI 45233923962 GREEN (headSha 1b122480, tests ran, no tracking deps, v1+v2+v3). APK sha256 4376d0fb…6755 staged /sdcard/Download/CleanBrowser-toolbar-new-tab-1b122480.apk (hash same via root; dex has new "Copy address"). User "yes install it" -> INSTALLED 13:07 EST (pm Success; installed base.apk sha256 4376d0fb…6755 = staged; crash buffer 0). Feature NOT tested yet.
+- Open/Next: CI -> stage APK -> ask user -> install -> user checks the 3 items (toolbar width on FIT, private tab +, copy toast).
+- Resume point: branch pushed (ls-remote == 1b122480); FIT runs 3def5445 (= main code).
+
 ## 2026-11-23 — Magnets from uTorrent/BitTorrent Web share links (MERGED main 8a1ccd18; code = tested 3def5445)
 - Why: a utweb.rainberrytv.com/gui/share.html#link=magnet:… link did nothing useful. The page's own script shows "this device isn't supported" on Android/mobile/Linux and only offers its Add torrent button (window.open(magnet)) on desktop, so the browser never saw a magnet. In the Add download box the link started with https and was treated as a file.
 - Built: Urls.magnetIn(url) = the magnet itself, or the `link` value (query or fragment) of a .../gui/share.html page when it decodes to magnet:?. Used in Engine.handleNavigation (link taps/redirects), Tabs.load (address bar, links from other apps; a fresh tab is left blank), Downloads.addUrl + Add download dialog (no file-name/checksum fields). Urls.toUrl keeps typed magnet: links instead of searching them. Other pages with magnets in their address (e.g. in-browser torrent players) are not touched.
