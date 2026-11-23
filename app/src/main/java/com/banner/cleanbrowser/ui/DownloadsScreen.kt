@@ -142,6 +142,7 @@ private fun statusText(ctx: Context, d: DlItem): String {
         DlStatus.PAUSED -> { parts += "Paused"; if (d.total > 0) parts += "${(d.progress * 100).toInt()}%" }
         DlStatus.CHECKING -> parts += "Checking"
         DlStatus.METADATA -> parts += "Getting torrent info · ${d.peers} peers"
+        DlStatus.PREPARING -> parts += "Preparing on SD card · ${size(ctx, d.prepDone)} / ${size(ctx, d.prepTotal)}"
         DlStatus.SEEDING -> { parts += "Seeding"; parts += size(ctx, d.upSpeed) + "/s up"; parts += "ratio %.2f".format(d.ratio) }
         DlStatus.DONE -> {
             parts += size(ctx, d.total)

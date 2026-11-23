@@ -15,9 +15,12 @@ import androidx.compose.runtime.setValue
 enum class DlKind { HTTP, TORRENT }
 
 enum class DlStatus {
-    QUEUED, CONNECTING, RUNNING, WAITING_NETWORK, PAUSED, CHECKING, METADATA, SEEDING, DONE, FAILED;
+    QUEUED, CONNECTING, RUNNING, WAITING_NETWORK, PAUSED, CHECKING, METADATA, SEEDING, DONE, FAILED,
+    /** Growing files on an SD card in small steps before the download writes into them. */
+    PREPARING;
 
-    val active get() = this == QUEUED || this == CONNECTING || this == RUNNING || this == WAITING_NETWORK || this == CHECKING || this == METADATA
+    val active get() = this == QUEUED || this == CONNECTING || this == RUNNING || this == WAITING_NETWORK || this == CHECKING || this == METADATA ||
+        this == PREPARING
     val finished get() = this == DONE || this == SEEDING
 }
 
@@ -66,8 +69,15 @@ class DlItem(
     var sequential by mutableStateOf(sequential)
     var liveConnections by mutableIntStateOf(0)
     var errorText by mutableStateOf(error)
+    /** Bytes made ready / to make ready while [DlStatus.PREPARING]. */
+    var prepDone by mutableLongStateOf(0L)
+    var prepTotal by mutableLongStateOf(0L)
 
-    val progress: Float get() = if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else 0f
+    val progress: Float get() = when {
+        status == DlStatus.PREPARING && prepTotal > 0 -> (prepDone.toFloat() / prepTotal).coerceIn(0f, 1f)
+        total > 0 -> (done.toFloat() / total).coerceIn(0f, 1f)
+        else -> 0f
+    }
 }
 
 class DlStore(context: Context) : SQLiteOpenHelper(context, "downloads.db", null, 1) {
