@@ -5,10 +5,10 @@ Newest first.
 ## Lessons learned (don't repeat these)
 - 11-19: pre-allocation on exFAT SD = kernel zero-fill through FUSE, app process unkillable for hours -> only pre-allocate on internal storage; test big-file features on SD too.
 
-## 2026-11-23 — New-tab + button, menu + icon, copy/share in the address bar (feat/toolbar-new-tab-copy-share 1b122480, CI running)
+## 2026-11-23 — New-tab + button, menu + icon, copy/share in the address bar (feat/toolbar-new-tab-copy-share 1b122480, CI green, staged)
 - Why (user, with 2 screenshots of start page + menu): "+ button next to open tabs box", "move New tab to the top buttons row as a + button", "tap the address bar on a site -> copy address quick button and share option". Plan confirmed by user ("ok").
 - Built (BrowserScreen.kt only): Toolbar + IconButton before TabsButton -> Browser.newTab(tab.isPrivate); MenuSheet icon row gets + (Browser.newTab(false)) after Share, "New tab" list item removed ("New private tab" stays); Suggestions(current=open web tab, onDone) shows CurrentPageRow (site icon, title, url, Copy -> Browser.copy + toast "Address copied", Share -> Browser.share; both close editing) while nothing is typed. Reuses existing Browser.copy/share + AppIcons.Copy.
-- CI 45233923962 running. NOT device-tested.
+- CI 45233923962 GREEN (headSha 1b122480, tests ran, no tracking deps, v1+v2+v3). APK sha256 4376d0fb…6755 staged /sdcard/Download/CleanBrowser-toolbar-new-tab-1b122480.apk (hash same via root; dex has new "Copy address"). NOT device-tested; install awaits user yes.
 - Open/Next: CI -> stage APK -> ask user -> install -> user checks the 3 items (toolbar width on FIT, private tab +, copy toast).
 - Resume point: branch pushed (ls-remote == 1b122480); FIT runs 3def5445 (= main code).
 
